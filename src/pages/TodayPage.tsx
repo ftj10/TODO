@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -23,11 +23,15 @@ import { ConfirmDoneDialog } from "../components/ConfirmDoneDialog";
 import { ConfirmDeleteDialog } from "../components/ConfirmDeleteDialog";
 
 import {
+  COMPLETIONS_KEY,
   loadCompletions,
   saveCompletions,
   markDoneForDate,
   type CompletionMap,
 } from "../app/completions";
+
+
+
 
 export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void }) {
   const [selectedDay, setSelectedDay] = useState(() => ymd(dayjs()));
@@ -36,6 +40,16 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
   const [editing, setEditing] = useState<Task | undefined>(undefined);
 
   const [completions, setCompletions] = useState<CompletionMap>(() => loadCompletions());
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== COMPLETIONS_KEY) return;
+      // reload completions whenever another tab updates it
+      setCompletions(loadCompletions());
+    }
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const todays = useMemo(
     () => tasksForDate(props.tasks, selectedDay, completions),

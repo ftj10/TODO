@@ -13,7 +13,7 @@ import { ymd } from "../app/date";
 
 import { loadCompletions } from "../app/completions";
 
-export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void }) {
+export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void; completionsRev: number; }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | undefined>(undefined);
   const [defaultDate, setDefaultDate] = useState(() => ymd(dayjs()));
@@ -38,7 +38,7 @@ export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => voi
       const evts = toCalendarEventsForRange(props.tasks, completions, start, end);
       successCallback(evts);
     };
-  }, [props.tasks]);
+  }, [props.tasks, props.completionsRev]);
 
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", p: 2 }}>

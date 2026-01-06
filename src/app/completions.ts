@@ -1,4 +1,4 @@
-const COMPLETIONS_KEY = "weekly_todo_completions_v1";
+export const COMPLETIONS_KEY = "weekly_todo_completions_v1";
 
 /**
  * Store: { [key: "taskId::YYYY-MM-DD"]: true }
