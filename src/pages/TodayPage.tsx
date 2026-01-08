@@ -247,9 +247,9 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
                   Done
                 </Button>
 
-                <Button color="error" onClick={() => setDeleteConfirm({ open: true, task })}>
+                {/* <Button color="error" onClick={() => setDeleteConfirm({ open: true, task })}>
                   Delete
-                </Button>
+                </Button> */}
               </Stack>
             </CardContent>
           </Card>

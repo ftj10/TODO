@@ -10,6 +10,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Box,
 } from "@mui/material";
 import type { Task, TaskType } from "../types";
 import { useEffect, useMemo, useState } from "react";
@@ -20,19 +21,16 @@ type Mode = "create" | "edit";
 export function TaskDialog(props: {
   open: boolean;
   mode: Mode;
-  defaultDateYmd: string; // for create + also acts like "occurrence date" when editing from calendar
+  defaultDateYmd: string;
   task?: Task;
   onClose: () => void;
   onSave: (t: Task) => void;
   onDelete?: (id: string) => void;
-
-  // ✅ NEW: for PERMANENT tasks, move the occurrence on `defaultDateYmd` to today (this week only)
   onMoveOccurrenceToToday?: (task: Task, fromDateYmd: string) => void;
 }) {
   const base = useMemo(() => {
     if (props.mode === "edit" && props.task) return props.task;
 
-    // ✅ Create mode: generate a fresh id each time the dialog is opened
     const d = dayjs(props.defaultDateYmd);
     return {
       id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
@@ -45,7 +43,6 @@ export function TaskDialog(props: {
       updatedAt: new Date().toISOString(),
     } satisfies Task;
   }, [props.mode, props.task, props.defaultDateYmd, props.open]);
-
 
   const [title, setTitle] = useState(base.title);
   const [type, setType] = useState<TaskType>(base.type);
@@ -85,7 +82,7 @@ export function TaskDialog(props: {
   const currentWeekStart = weekStartMonday(dayjs());
   const currentWeekEnd = ymd(dayjs(currentWeekStart).add(6, "day"));
 
-  // TEMPORARY: move its date to today (only this week + from future day)
+  // TEMPORARY → move to today
   const canMoveTempToToday =
     props.mode === "edit" &&
     type === "TEMPORARY" &&
@@ -94,12 +91,11 @@ export function TaskDialog(props: {
     date <= currentWeekEnd;
 
   function moveTempToToday() {
-    const out = buildTask({ date: todayYmd, done: false });
-    props.onSave(out);
+    props.onSave(buildTask({ date: todayYmd, done: false }));
     props.onClose();
   }
 
-  // PERMANENT: move the *occurrence* on defaultDateYmd to today (only this week + from future day)
+  // PERMANENT → move occurrence to today
   const fromDateYmd = props.defaultDateYmd;
   const canMovePermanentOccurrenceToToday =
     props.mode === "edit" &&
@@ -110,7 +106,7 @@ export function TaskDialog(props: {
     fromDateYmd <= currentWeekEnd;
 
   function movePermanentOccurrenceToToday() {
-    const taskNow = buildTask(); // includes edited title if you changed it
+    const taskNow = buildTask();
     props.onMoveOccurrenceToToday?.(taskNow, fromDateYmd);
     props.onClose();
   }
@@ -128,69 +124,91 @@ export function TaskDialog(props: {
   return (
     <Dialog open={props.open} onClose={props.onClose} fullWidth maxWidth="sm">
       <DialogTitle>{props.mode === "create" ? "Add task" : "Edit task"}</DialogTitle>
-      <DialogContent sx={{ display: "grid", gap: 3, pt: 1 }}>
-        <TextField label="Task name" value={title} onChange={(e) => setTitle(e.target.value)} sx={{ mt: 2 }}/>
 
-        <FormControl>
-          <InputLabel>Type</InputLabel>
-          <Select label="Type" value={type} onChange={(e) => setType(e.target.value as TaskType)}>
-            <MenuItem value="PERMANENT">Permanent (every week)</MenuItem>
-            <MenuItem value="TEMPORARY">Temporary (one-time)</MenuItem>
-          </Select>
-        </FormControl>
+      {/* ✅ FORM: Enter submits */}
+      <Box
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSave) return;
+          save();
+        }}
+      >
+        <DialogContent sx={{ display: "grid", gap: 3, pt: 2 }}>
+          <TextField
+            label="Task name"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            InputLabelProps={{ shrink: true }}
+            sx={{ mt: 2 }}
+          />
 
-        {type === "PERMANENT" ? (
           <FormControl>
-            <InputLabel>Weekday</InputLabel>
-            <Select label="Weekday" value={weekday} onChange={(e) => setWeekday(Number(e.target.value))}>
-              {weekdayItems.map((it) => (
-                <MenuItem key={it.v} value={it.v}>
-                  {it.label}
-                </MenuItem>
-              ))}
+            <InputLabel>Type</InputLabel>
+            <Select label="Type" value={type} onChange={(e) => setType(e.target.value as TaskType)}>
+              <MenuItem value="PERMANENT">Permanent (every week)</MenuItem>
+              <MenuItem value="TEMPORARY">Temporary (one-time)</MenuItem>
             </Select>
           </FormControl>
-        ) : (
-          <TextField
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        )}
-      </DialogContent>
 
-      <DialogActions>
-        {props.mode === "edit" && props.onDelete && props.task ? (
-          <Button
-            color="error"
-            onClick={() => {
-              props.onDelete?.(props.task!.id);
-              props.onClose();
-            }}
-          >
-            Delete
+          {type === "PERMANENT" ? (
+            <FormControl>
+              <InputLabel>Weekday</InputLabel>
+              <Select
+                label="Weekday"
+                value={weekday}
+                onChange={(e) => setWeekday(Number(e.target.value))}
+              >
+                {weekdayItems.map((it) => (
+                  <MenuItem key={it.v} value={it.v}>
+                    {it.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <TextField
+              label="Date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          {props.mode === "edit" && props.onDelete && props.task ? (
+            <Button
+              color="error"
+              onClick={() => {
+                props.onDelete?.(props.task!.id);
+                props.onClose();
+              }}
+            >
+              Delete
+            </Button>
+          ) : (
+            <span />
+          )}
+
+          {canMoveTempToToday ? <Button onClick={moveTempToToday}>Move to today</Button> : <span />}
+
+          {canMovePermanentOccurrenceToToday ? (
+            <Button onClick={movePermanentOccurrenceToToday}>
+              Move occurrence to today
+            </Button>
+          ) : (
+            <span />
+          )}
+
+          <Button onClick={props.onClose}>Cancel</Button>
+          <Button variant="contained" disabled={!canSave} type="submit">
+            Save
           </Button>
-        ) : (
-          <span />
-        )}
-
-        {/* TEMPORARY move */}
-        {canMoveTempToToday ? <Button onClick={moveTempToToday}>Move to today</Button> : <span />}
-
-        {/* PERMANENT occurrence move */}
-        {canMovePermanentOccurrenceToToday ? (
-          <Button onClick={movePermanentOccurrenceToToday}>Move occurrence to today</Button>
-        ) : (
-          <span />
-        )}
-
-        <Button onClick={props.onClose}>Cancel</Button>
-        <Button variant="contained" disabled={!canSave} onClick={save}>
-          Save
-        </Button>
-      </DialogActions>
+        </DialogActions>
+      </Box>
     </Dialog>
   );
 }
