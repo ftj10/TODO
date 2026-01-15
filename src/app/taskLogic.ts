@@ -44,12 +44,20 @@ export function toCalendarEventsForRange(
   const events: any[] = [];
 
   // Colour palette for emergency levels. Lower number = higher urgency = darker colour.
-  const colorMap: { [key: number]: { bg: string; border: string; text: string } } = {
-    1: { bg: "#F44336", border: "#D32F2F", text: "#FFFFFF" }, // dark red
-    2: { bg: "#FF8A65", border: "#F4511E", text: "#000000" }, // orange
-    3: { bg: "#FFEB3B", border: "#FBC02D", text: "#000000" }, // yellow
+  const permanentColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
+    1: { bg: "#0D47A1", border: "#08306B", text: "#FFFFFF" }, // very dark blue
+    2: { bg: "#1565C0", border: "#0D47A1", text: "#FFFFFF" }, // dark blue
+    3: { bg: "#1E88E5", border: "#1565C0", text: "#FFFFFF" }, // medium blue
+    4: { bg: "#90CAF9", border: "#42A5F5", text: "#000000" }, // light blue
+    5: { bg: "#E3F2FD", border: "#BBDEFB", text: "#000000" }, // very light blue
+  };
+
+  const temporaryColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
+    1: { bg: "#F57F17", border: "#E65100", text: "#000000" }, // dark yellow / amber
+    2: { bg: "#F9A825", border: "#F57F17", text: "#000000" }, // strong yellow
+    3: { bg: "#FDD835", border: "#FBC02D", text: "#000000" }, // medium yellow
     4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" }, // pale yellow
-    5: { bg: "#FFFFFF", border: "#E0E0E0", text: "#000000" }, // white/grey
+    5: { bg: "#FFFDE7", border: "#FFF9C4", text: "#000000" }, // very light yellow
   };
 
   // 1) Temporary tasks within the visible range
@@ -62,7 +70,7 @@ export function toCalendarEventsForRange(
     if (d.isAfter(rangeEnd.subtract(1, "day"), "day")) continue;
 
     const level = t.emergency ?? 5;
-    const col = colorMap[level] ?? colorMap[5];
+    const col = temporaryColorMap[level] ?? temporaryColorMap[5];
 
     events.push({
       id: t.id,
@@ -88,7 +96,7 @@ export function toCalendarEventsForRange(
       if (isDoneForDate(completions, t.id, dateStr)) continue;
 
       const level = t.emergency ?? 5;
-      const col = colorMap[level] ?? colorMap[5];
+      const col = permanentColorMap[level] ?? permanentColorMap[5];
 
       events.push({
         id: `${t.id}::${dateStr}`,

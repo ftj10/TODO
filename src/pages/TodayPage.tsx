@@ -162,14 +162,31 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
     return false;
   }
 
-  // Colour palette for emergency levels used in Today page
-  const emergencyColorMap: { [key: number]: { bg: string; border: string; text: string } } = {
-    1: { bg: "#F44336", border: "#D32F2F", text: "#FFFFFF" }, // dark red
-    2: { bg: "#FF8A65", border: "#F4511E", text: "#000000" }, // orange
-    3: { bg: "#FFEB3B", border: "#FBC02D", text: "#000000" }, // yellow
-    4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" }, // pale yellow
-    5: { bg: "#FFFFFF", border: "#E0E0E0", text: "#000000" }, // white/grey
+  // ✅ Add these maps inside TodayPage (replace your old emergencyColorMap)
+  const permanentColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
+    1: { bg: "#0D47A1", border: "#08306B", text: "#FFFFFF" }, // very dark blue
+    2: { bg: "#1565C0", border: "#0D47A1", text: "#FFFFFF" }, // dark blue
+    3: { bg: "#1E88E5", border: "#1565C0", text: "#FFFFFF" }, // medium blue
+    4: { bg: "#90CAF9", border: "#42A5F5", text: "#000000" }, // light blue
+    5: { bg: "#E3F2FD", border: "#BBDEFB", text: "#000000" }, // very light blue
   };
+
+  const temporaryColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
+    1: { bg: "#F57F17", border: "#E65100", text: "#000000" }, // dark yellow / amber
+    2: { bg: "#F9A825", border: "#F57F17", text: "#000000" }, // strong yellow
+    3: { bg: "#FDD835", border: "#FBC02D", text: "#000000" }, // medium yellow
+    4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" }, // pale yellow
+    5: { bg: "#FFFDE7", border: "#FFF9C4", text: "#000000" }, // very light yellow
+  };
+
+  function getTaskColors(task: Task) {
+    const level = task.emergency ?? 5;
+    const safeLevel = Math.min(5, Math.max(1, level));
+
+    const map = task.type === "PERMANENT" ? permanentColorMap : temporaryColorMap;
+    return map[safeLevel] ?? map[5];
+  }
+
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
@@ -200,8 +217,8 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
 
       <Stack spacing={2}>
         {todays.map((task) => {
-          const level = task.emergency ?? 5;
-          const col = emergencyColorMap[level] ?? emergencyColorMap[5];
+          const col = getTaskColors(task);
+
           return (
             <Card
               key={task.id}
@@ -214,16 +231,17 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
               }}
             >
               <CardContent
-                sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 2,
+                }}
               >
                 <Box>
-                  {/* ✅ Click task name to edit (remove Edit button) */}
                   <Typography
                     fontWeight={700}
-                    sx={{
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
+                    sx={{ cursor: "pointer", userSelect: "none" }}
                     onClick={() => {
                       setEditing(task);
                       setDialogOpen(true);
@@ -244,7 +262,6 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
                     </Button>
                   )}
 
-                  {/* ✅ NEW: Move from selected day -> today (TEMPORARY + PERMANENT), only this week */}
                   {canMoveFromSelectedDayToToday(task) && (
                     <Button
                       startIcon={<TodayIcon />}
@@ -261,13 +278,14 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
                     startIcon={<CheckIcon />}
                     variant="outlined"
                     onClick={() => setDoneConfirm({ open: true, task })}
+                    sx={{
+                      // optional: make outline readable on dark cards
+                      borderColor: col.text,
+                      color: col.text,
+                    }}
                   >
                     Done
                   </Button>
-
-                  {/* <Button color="error" onClick={() => setDeleteConfirm({ open: true, task })}> */}
-                  {/*   Delete */}
-                  {/* </Button> */}
                 </Stack>
               </CardContent>
             </Card>
