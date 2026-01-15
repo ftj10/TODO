@@ -30,9 +30,6 @@ import {
   type CompletionMap,
 } from "../app/completions";
 
-
-
-
 export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void }) {
   const [selectedDay, setSelectedDay] = useState(() => ymd(dayjs()));
 
@@ -131,6 +128,7 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
       done: false,
       createdAt: nowIso,
       updatedAt: nowIso,
+      emergency: task.emergency ?? 5,
     };
     upsert(temp);
   }
@@ -164,6 +162,15 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
     return false;
   }
 
+  // Colour palette for emergency levels used in Today page
+  const emergencyColorMap: { [key: number]: { bg: string; border: string; text: string } } = {
+    1: { bg: "#F44336", border: "#D32F2F", text: "#FFFFFF" }, // dark red
+    2: { bg: "#FF8A65", border: "#F4511E", text: "#000000" }, // orange
+    3: { bg: "#FFEB3B", border: "#FBC02D", text: "#000000" }, // yellow
+    4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" }, // pale yellow
+    5: { bg: "#FFFFFF", border: "#E0E0E0", text: "#000000" }, // white/grey
+  };
+
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -192,68 +199,80 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
       </Stack>
 
       <Stack spacing={2}>
-        {todays.map((task) => (
-          <Card key={task.id} variant="outlined">
-            <CardContent
-              sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
+        {todays.map((task) => {
+          const level = task.emergency ?? 5;
+          const col = emergencyColorMap[level] ?? emergencyColorMap[5];
+          return (
+            <Card
+              key={task.id}
+              variant="outlined"
+              sx={{
+                backgroundColor: col.bg,
+                borderColor: col.border,
+                color: col.text,
+                borderWidth: 1,
+              }}
             >
-              <Box>
-                {/* ✅ Click task name to edit (remove Edit button) */}
-                <Typography
-                  fontWeight={700}
-                  sx={{
-                    cursor: "pointer",
-                    userSelect: "none",
-                    color: task.type === "TEMPORARY" ? "error.main" : "text.primary",
-                  }}
-                  onClick={() => {
-                    setEditing(task);
-                    setDialogOpen(true);
-                  }}
-                >
-                  {task.title}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary">
-                  {task.type === "PERMANENT" ? "Permanent (weekly)" : "Temporary (one-time)"}
-                </Typography>
-              </Box>
-
-              <Stack direction="row" spacing={1} alignItems="center">
-                {task.type === "TEMPORARY" && (
-                  <Button startIcon={<SwapHorizIcon />} onClick={() => moveTemporaryToTomorrow(task)}>
-                    Move to tomorrow
-                  </Button>
-                )}
-
-                {/* ✅ NEW: Move from selected day -> today (TEMPORARY + PERMANENT), only this week */}
-                {canMoveFromSelectedDayToToday(task) && (
-                  <Button
-                    startIcon={<TodayIcon />}
+              <CardContent
+                sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
+              >
+                <Box>
+                  {/* ✅ Click task name to edit (remove Edit button) */}
+                  <Typography
+                    fontWeight={700}
+                    sx={{
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
                     onClick={() => {
-                      if (task.type === "TEMPORARY") moveTemporaryToToday(task);
-                      if (task.type === "PERMANENT") movePermanentOccurrenceToToday(task);
+                      setEditing(task);
+                      setDialogOpen(true);
                     }}
                   >
-                    Move to today
+                    {task.title}
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ color: col.text }}>
+                    {task.type === "PERMANENT" ? "Permanent (weekly)" : "Temporary (one-time)"}
+                  </Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {task.type === "TEMPORARY" && (
+                    <Button startIcon={<SwapHorizIcon />} onClick={() => moveTemporaryToTomorrow(task)}>
+                      Move to tomorrow
+                    </Button>
+                  )}
+
+                  {/* ✅ NEW: Move from selected day -> today (TEMPORARY + PERMANENT), only this week */}
+                  {canMoveFromSelectedDayToToday(task) && (
+                    <Button
+                      startIcon={<TodayIcon />}
+                      onClick={() => {
+                        if (task.type === "TEMPORARY") moveTemporaryToToday(task);
+                        if (task.type === "PERMANENT") movePermanentOccurrenceToToday(task);
+                      }}
+                    >
+                      Move to today
+                    </Button>
+                  )}
+
+                  <Button
+                    startIcon={<CheckIcon />}
+                    variant="outlined"
+                    onClick={() => setDoneConfirm({ open: true, task })}
+                  >
+                    Done
                   </Button>
-                )}
 
-                <Button
-                  startIcon={<CheckIcon />}
-                  variant="outlined"
-                  onClick={() => setDoneConfirm({ open: true, task })}
-                >
-                  Done
-                </Button>
-
-                {/* <Button color="error" onClick={() => setDeleteConfirm({ open: true, task })}>
-                  Delete
-                </Button> */}
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
+                  {/* <Button color="error" onClick={() => setDeleteConfirm({ open: true, task })}> */}
+                  {/*   Delete */}
+                  {/* </Button> */}
+                </Stack>
+              </CardContent>
+            </Card>
+          );
+        })}
 
         {todays.length === 0 && <Typography color="text.secondary">No tasks for this day.</Typography>}
       </Stack>
@@ -288,6 +307,7 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
             done: false,
             createdAt: nowIso,
             updatedAt: nowIso,
+            emergency: task.emergency ?? 5,
           };
           upsert(temp);
         }}

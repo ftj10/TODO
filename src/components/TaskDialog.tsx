@@ -29,7 +29,10 @@ export function TaskDialog(props: {
   onMoveOccurrenceToToday?: (task: Task, fromDateYmd: string) => void;
 }) {
   const base = useMemo(() => {
-    if (props.mode === "edit" && props.task) return props.task;
+    if (props.mode === "edit" && props.task) {
+      // When editing an existing task, default emergency to 5 if undefined
+      return { ...props.task, emergency: props.task.emergency ?? 5 };
+    }
 
     const d = dayjs(props.defaultDateYmd);
     return {
@@ -41,6 +44,7 @@ export function TaskDialog(props: {
       done: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      emergency: 5,
     } satisfies Task;
   }, [props.mode, props.task, props.defaultDateYmd, props.open]);
 
@@ -48,6 +52,7 @@ export function TaskDialog(props: {
   const [type, setType] = useState<TaskType>(base.type);
   const [weekday, setWeekday] = useState<number>(base.weekday ?? 1);
   const [date, setDate] = useState<string>(base.date ?? props.defaultDateYmd);
+  const [emergency, setEmergency] = useState<number>(base.emergency ?? 5);
 
   useEffect(() => {
     if (!props.open) return;
@@ -55,6 +60,7 @@ export function TaskDialog(props: {
     setType(base.type);
     setWeekday(base.weekday ?? 1);
     setDate(base.date ?? props.defaultDateYmd);
+    setEmergency(base.emergency ?? 5);
   }, [props.open, base, props.defaultDateYmd]);
 
   const canSave = title.trim().length > 0;
@@ -69,6 +75,7 @@ export function TaskDialog(props: {
       date: type === "TEMPORARY" ? date : undefined,
       done: type === "TEMPORARY" ? (base.done ?? false) : undefined,
       updatedAt: now,
+      emergency: emergency,
       ...override,
     };
   }
@@ -152,6 +159,22 @@ export function TaskDialog(props: {
             </Select>
           </FormControl>
 
+          {/* Emergency level selector */}
+          <FormControl>
+            <InputLabel>Emergency</InputLabel>
+            <Select
+              label="Emergency"
+              value={emergency}
+              onChange={(e) => setEmergency(Number(e.target.value))}
+            >
+              <MenuItem value={1}>1 (Highest)</MenuItem>
+              <MenuItem value={2}>2</MenuItem>
+              <MenuItem value={3}>3</MenuItem>
+              <MenuItem value={4}>4</MenuItem>
+              <MenuItem value={5}>5 (Lowest)</MenuItem>
+            </Select>
+          </FormControl>
+
           {type === "PERMANENT" ? (
             <FormControl>
               <InputLabel>Weekday</InputLabel>
@@ -196,9 +219,7 @@ export function TaskDialog(props: {
           {canMoveTempToToday ? <Button onClick={moveTempToToday}>Move to today</Button> : <span />}
 
           {canMovePermanentOccurrenceToToday ? (
-            <Button onClick={movePermanentOccurrenceToToday}>
-              Move occurrence to today
-            </Button>
+            <Button onClick={movePermanentOccurrenceToToday}>Move occurrence to today</Button>
           ) : (
             <span />
           )}
