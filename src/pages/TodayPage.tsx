@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -31,7 +32,21 @@ import {
 } from "../app/completions";
 
 export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void }) {
-  const [selectedDay, setSelectedDay] = useState(() => ymd(dayjs()));
+  // ✅ read date from URL: /?date=YYYY-MM-DD
+  const [searchParams] = useSearchParams();
+  const initialDayParam = searchParams.get("date");
+
+  const [selectedDay, setSelectedDay] = useState(() =>
+    initialDayParam ?? ymd(dayjs())
+  );
+
+  // ✅ update selectedDay if user navigates with another date param
+  useEffect(() => {
+    const param = searchParams.get("date");
+    if (param) {
+      setSelectedDay(param);
+    }
+  }, [searchParams]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | undefined>(undefined);
@@ -149,34 +164,30 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
     if (selectedDay <= todayYmd) return false;
 
     if (task.type === "TEMPORARY") {
-      // TEMPORARY task is displayed on selectedDay (tasksForDate filters by date)
-      // so we can just allow it
       return true;
     }
 
     if (task.type === "PERMANENT") {
-      // permanent occurrence is displayed on selectedDay already
       return true;
     }
 
     return false;
   }
 
-  // ✅ Add these maps inside TodayPage (replace your old emergencyColorMap)
   const permanentColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
-    1: { bg: "#0D47A1", border: "#08306B", text: "#FFFFFF" }, // very dark blue
-    2: { bg: "#1565C0", border: "#0D47A1", text: "#FFFFFF" }, // dark blue
-    3: { bg: "#1E88E5", border: "#1565C0", text: "#FFFFFF" }, // medium blue
-    4: { bg: "#90CAF9", border: "#42A5F5", text: "#000000" }, // light blue
-    5: { bg: "#E3F2FD", border: "#BBDEFB", text: "#000000" }, // very light blue
+    1: { bg: "#0D47A1", border: "#08306B", text: "#FFFFFF" },
+    2: { bg: "#1565C0", border: "#0D47A1", text: "#FFFFFF" },
+    3: { bg: "#1E88E5", border: "#1565C0", text: "#FFFFFF" },
+    4: { bg: "#90CAF9", border: "#42A5F5", text: "#000000" },
+    5: { bg: "#E3F2FD", border: "#BBDEFB", text: "#000000" },
   };
 
   const temporaryColorMap: { [level: number]: { bg: string; border: string; text: string } } = {
-    1: { bg: "#F57F17", border: "#E65100", text: "#000000" }, // dark yellow / amber
-    2: { bg: "#F9A825", border: "#F57F17", text: "#000000" }, // strong yellow
-    3: { bg: "#FDD835", border: "#FBC02D", text: "#000000" }, // medium yellow
-    4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" }, // pale yellow
-    5: { bg: "#FFFDE7", border: "#FFF9C4", text: "#000000" }, // very light yellow
+    1: { bg: "#F57F17", border: "#E65100", text: "#000000" },
+    2: { bg: "#F9A825", border: "#F57F17", text: "#000000" },
+    3: { bg: "#FDD835", border: "#FBC02D", text: "#000000" },
+    4: { bg: "#FFF59D", border: "#FDD835", text: "#000000" },
+    5: { bg: "#FFFDE7", border: "#FFF9C4", text: "#000000" },
   };
 
   function getTaskColors(task: Task) {
@@ -186,7 +197,6 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
     const map = task.type === "PERMANENT" ? permanentColorMap : temporaryColorMap;
     return map[safeLevel] ?? map[5];
   }
-
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
@@ -279,7 +289,6 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
                     variant="outlined"
                     onClick={() => setDoneConfirm({ open: true, task })}
                     sx={{
-                      // optional: make outline readable on dark cards
                       borderColor: col.text,
                       color: col.text,
                     }}
@@ -306,17 +315,14 @@ export function TodayPage(props: { tasks: Task[]; setTasks: (next: Task[]) => vo
         }}
         onSave={upsert}
         onDelete={remove}
-        // ✅ allow moving PERMANENT occurrence from dialog too (uses defaultDateYmd as "from date")
         onMoveOccurrenceToToday={(task, fromDateYmd) => {
           const todayStr = ymd(dayjs());
           const nowIso = new Date().toISOString();
 
-          // hide occurrence on fromDate
           const next = markDoneForDate(completions, task.id, fromDateYmd);
           setCompletions(next);
           saveCompletions(next);
 
-          // create temp clone on today
           const temp: Task = {
             id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
             title: task.title,

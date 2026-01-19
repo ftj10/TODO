@@ -1,5 +1,6 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -13,10 +14,16 @@ import { ymd } from "../app/date";
 
 import { loadCompletions } from "../app/completions";
 
-export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => void; completionsRev: number; }) {
+export function WeekPage(props: {
+  tasks: Task[];
+  setTasks: (next: Task[]) => void;
+  completionsRev: number;
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | undefined>(undefined);
   const [defaultDate, setDefaultDate] = useState(() => ymd(dayjs()));
+
+  const navigate = useNavigate();
 
   function upsert(t: Task) {
     const next = props.tasks.some((x) => x.id === t.id)
@@ -65,6 +72,20 @@ export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => voi
         }}
         firstDay={1}
         events={events}
+
+        // ✅ CLICK "Monday 1" / "Tuesday 2" header to jump to TodayPage
+        dayHeaderContent={(arg) => {
+          const ymdStr = dayjs(arg.date).format("YYYY-MM-DD");
+          return (
+            <span
+              style={{ cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => navigate(`/?date=${ymdStr}`)}
+            >
+              {arg.text}
+            </span>
+          );
+        }}
+
         eventClick={(info) => {
           const taskId = info.event.extendedProps.taskId as string;
           const task = props.tasks.find((t) => t.id === taskId);
@@ -74,11 +95,16 @@ export function WeekPage(props: { tasks: Task[]; setTasks: (next: Task[]) => voi
           setDefaultDate(startStr);
           setDialogOpen(true);
         }}
+
+        // optional: keep only for selecting default date (no jump)
         dateClick={(info) => {
-          setDefaultDate(info.dateStr.slice(0, 10));
+          const date = info.dateStr.slice(0, 10);
+          setDefaultDate(date);
         }}
+
         height="auto"
       />
+
 
       <TaskDialog
         open={dialogOpen}
