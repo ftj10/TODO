@@ -5,17 +5,7 @@ description: Coordinates the full AI-assisted development workflow for TaskTide 
 
 # TaskTide Agent Workflow
 
-## Phase 1 — Brainstorming (runs immediately on invocation)
-
-Invoke `/brainstorming` now. That is the **only** action in Phase 1.
-
-> **HARD STOP after brainstorming completes.**
-> Do NOT classify, do NOT output a workflow path, do NOT generate a Codex prompt, do NOT invoke any other skill.
-> Wait silently for the user to continue.
-
-## Phase 2 — Classification (only after user explicitly continues)
-
-When the user signals they are ready to proceed:
+## Phase 1 — Classification (runs immediately on invocation)
 
 1. Classify the requirement (see below)
 2. Output: chosen path, reason, and command sequence as a numbered list
@@ -25,7 +15,7 @@ When the user signals they are ready to proceed:
 > Each step in the command sequence requires an **explicit user trigger** before it runs.
 > "go ahead", "yes", or "continue" does NOT mean run all remaining steps — it means run the single next step, then stop again.
 
-## Phase 3 — Step execution (one step at a time)
+## Phase 2 — Step execution (one step at a time)
 
 When the user triggers a specific step:
 
@@ -47,28 +37,28 @@ When implementation or tests are needed, generate the Codex handoff prompt and r
 
 ## Command sequences
 
-### Large feature (4–5)
+### Large feature / Architecture change (4–5)
 ```
 /brainstorming → /to-prd → /to-issues → /triage → /grill-with-docs
-→ /planning-with-files:plan → Claude TDD handoff prompt
+→ /planning-with-files:plan → Codex TDD handoff prompt
 → Codex implements tests and code → Claude diff review → Codex fix prompt → /zoom-out
 ```
 
 ### Medium feature (3)
 ```
-/brainstorming → /grill-with-docs → /planning-with-files:plan → Claude TDD handoff prompt
+/brainstorming → /grill-with-docs → /planning-with-files:plan → Codex TDD handoff prompt
 → Codex implements tests and code → Claude diff review → Codex fix prompt
+```
+
+### Small docs/copy/UI (2)
+```
+/brainstorming → /planning-with-files:plan → Codex handoff prompt → Codex implements → quick review
 ```
 
 ### Small bug (1)
 ```
 /diagnose → /planning-with-files:plan (if multi-step) → Codex diagnosis/TDD handoff prompt
 → Codex reproduces, tests, and fixes → Claude diff review
-```
-
-### Small docs/copy/UI (2)
-```
-/planning-with-files:plan → Codex handoff prompt → Codex implements → quick review
 ```
 
 ## One-time repo setup
@@ -113,7 +103,7 @@ Use:
 
 Use `/codex:rescue --background` for every task that needs implementation, bug investigation, or tests. If the plugin is not installed, still output the Codex handoff prompt and make Codex execution the required next action.
 
-## Output format (Phase 2 only)
+## Output format (Phase 1 only)
 1. **Chosen workflow path** — with reason
 2. **Command sequence** — numbered list, each step labeled (e.g. "Step 1: /brainstorming")
 3. **Files to read** — before starting
